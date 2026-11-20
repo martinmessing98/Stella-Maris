@@ -1,0 +1,202 @@
+{
+  "entities": {
+    "JobOrder": {
+      "title": "JobOrder",
+      "description": "Contractor job order synced across devices for a signed-in user.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "jobNumber": { "type": "string", "minLength": 1, "maxLength": 32 },
+        "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "trade": {
+          "type": "string",
+          "enum": ["Kitchen & Bath", "Carpentry & Deck", "Electrical", "Plumbing", "General Handyman", "Drywall & Paint"]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Open", "Estimate", "In Progress", "Complete", "On Hold"]
+        },
+        "urgency": { "type": "number" },
+        "materialsNeeded": { "type": "boolean" },
+        "materialsList": { "type": "array", "description": "Bounded list of materials (max 100)" },
+        "clientId": { "type": "string", "maxLength": 128 },
+        "clientName": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "clientPhone": { "type": "string", "maxLength": 40 },
+        "clientEmail": { "type": "string", "maxLength": 160 },
+        "siteAddress": { "type": "string", "maxLength": 300 },
+        "startDate": { "type": "string", "maxLength": 20 },
+        "startTime": { "type": "string", "maxLength": 20 },
+        "finishDate": { "type": "string", "maxLength": 20 },
+        "finishTime": { "type": "string", "maxLength": 20 },
+        "estimatedRevenue": { "type": "number" },
+        "estimatedCost": { "type": "number" },
+        "actualCost": { "type": "number" },
+        "progressPercent": { "type": "number" },
+        "scopeSummary": { "type": "string", "maxLength": 5000 },
+        "lineItems": { "type": "array", "description": "Bounded list of estimate line items (max 100)" },
+        "coverPhotoUrl": { "type": "string", "maxLength": 1000 },
+        "driveFolderId": { "type": "string", "maxLength": 256 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "ownerId", "jobNumber", "title", "trade", "status", "urgency", "clientName", "startDate", "finishDate", "progressPercent", "createdAt", "updatedAt"]
+    },
+    "JobScheduleBlock": {
+      "title": "JobScheduleBlock",
+      "description": "Scheduled work shift or milestone block linked to a job order.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "jobId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "date": { "type": "string", "maxLength": 20 },
+        "startTime": { "type": "string", "maxLength": 20 },
+        "endTime": { "type": "string", "maxLength": 20 },
+        "crewAssigned": { "type": "string", "maxLength": 200 },
+        "notes": { "type": "string", "maxLength": 2000 },
+        "googleEventId": { "type": "string", "maxLength": 256 },
+        "syncState": { "type": "string", "enum": ["synced", "pending", "local"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "ownerId", "jobId", "title", "date", "startTime", "endTime", "crewAssigned", "syncState", "createdAt", "updatedAt"]
+    },
+    "DailyLog": {
+      "title": "DailyLog",
+      "description": "Field daily log entry recorded on a job site.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "jobId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "date": { "type": "string", "maxLength": 20 },
+        "author": { "type": "string", "maxLength": 120 },
+        "weather": { "type": "string", "maxLength": 120 },
+        "hoursWorked": { "type": "number" },
+        "progressPercent": { "type": "number" },
+        "workCompleted": { "type": "string", "maxLength": 3000 },
+        "materialsUsed": { "type": "string", "maxLength": 2000 },
+        "notes": { "type": "string", "maxLength": 3000 },
+        "photoIds": { "type": "array", "description": "Bounded list of attached file IDs (max 50)" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "ownerId", "jobId", "date", "author", "hoursWorked", "progressPercent", "workCompleted", "createdAt", "updatedAt"]
+    },
+    "PaymentRecord": {
+      "title": "PaymentRecord",
+      "description": "Job payment or expense record.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "jobId": { "type": "string", "maxLength": 128 },
+        "jobTitle": { "type": "string", "maxLength": 200 },
+        "clientName": { "type": "string", "maxLength": 160 },
+        "type": { "type": "string", "enum": ["Invoice Payment", "Deposit", "Progress Draw", "Material Expense", "Subcontractor Payout"] },
+        "direction": { "type": "string", "enum": ["inflow", "outflow"] },
+        "amount": { "type": "number" },
+        "date": { "type": "string", "maxLength": 20 },
+        "method": { "type": "string", "enum": ["ACH", "Check", "Credit Card", "Cash", "QuickBooks Online"] },
+        "status": { "type": "string", "enum": ["Paid", "Pending", "Overdue"] },
+        "referenceNumber": { "type": "string", "maxLength": 100 },
+        "notes": { "type": "string", "maxLength": 2000 },
+        "quickbooksId": { "type": "string", "maxLength": 128 },
+        "syncState": { "type": "string", "enum": ["synced", "pending", "local"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "ownerId", "jobTitle", "clientName", "type", "direction", "amount", "date", "method", "status", "syncState", "createdAt", "updatedAt"]
+    },
+    "JobFile": {
+      "title": "JobFile",
+      "description": "Metadata for site photos and job documents.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "jobId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "category": { "type": "string", "enum": ["Site Photo", "Estimate & Contract", "Permit", "Blueprint / Plan", "Receipt"] },
+        "mimeType": { "type": "string", "maxLength": 120 },
+        "sizeBytes": { "type": "number" },
+        "uploadedAt": { "type": "string", "maxLength": 40 },
+        "notes": { "type": "string", "maxLength": 1000 },
+        "localUrl": { "type": "string", "maxLength": 1000 },
+        "hasOfflineBlob": { "type": "boolean" },
+        "driveFileId": { "type": "string", "maxLength": 256 },
+        "driveWebViewLink": { "type": "string", "maxLength": 1000 },
+        "googlePhotosUrl": { "type": "string", "maxLength": 1000 },
+        "syncState": { "type": "string", "enum": ["synced", "pending", "local"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "ownerId", "jobId", "name", "category", "mimeType", "sizeBytes", "uploadedAt", "syncState", "createdAt", "updatedAt"]
+    },
+    "ClientContact": {
+      "title": "ClientContact",
+      "description": "Client contact record synced for the signed-in user.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "phone": { "type": "string", "maxLength": 40 },
+        "email": { "type": "string", "maxLength": 160 },
+        "address": { "type": "string", "maxLength": 300 },
+        "company": { "type": "string", "maxLength": 160 },
+        "googleResourceName": { "type": "string", "maxLength": 256 },
+        "syncState": { "type": "string", "enum": ["synced", "pending", "local"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "ownerId", "name", "syncState", "createdAt", "updatedAt"]
+    },
+    "UserCounterMeta": {
+      "title": "UserCounterMeta",
+      "description": "Per-user job ID sequence counter and cloud initialization flag.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "nextJobSeq": { "type": "number" },
+        "seeded": { "type": "boolean" },
+        "contactsResetV1": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "nextJobSeq", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/jobs/{jobId}": {
+      "schema": { "$ref": "#/entities/JobOrder" },
+      "description": "User-owned job orders with status, urgency, materials list, notes, and estimates."
+    },
+    "/users/{userId}/schedules/{scheduleId}": {
+      "schema": { "$ref": "#/entities/JobScheduleBlock" },
+      "description": "User-owned job schedule blocks."
+    },
+    "/users/{userId}/dailyLogs/{logId}": {
+      "schema": { "$ref": "#/entities/DailyLog" },
+      "description": "User-owned daily field logs."
+    },
+    "/users/{userId}/payments/{paymentId}": {
+      "schema": { "$ref": "#/entities/PaymentRecord" },
+      "description": "User-owned payment and expense records."
+    },
+    "/users/{userId}/files/{fileId}": {
+      "schema": { "$ref": "#/entities/JobFile" },
+      "description": "User-owned job file and photo metadata."
+    },
+    "/users/{userId}/contacts/{contactId}": {
+      "schema": { "$ref": "#/entities/ClientContact" },
+      "description": "User-owned client contacts."
+    },
+    "/users/{userId}/meta/{docId}": {
+      "schema": { "$ref": "#/entities/UserCounterMeta" },
+      "description": "User-owned sequence counter and sync metadata."
+    }
+  }
+}

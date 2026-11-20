@@ -1,0 +1,385 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isVerifiedOwner(userId) {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && isValidId(userId)
+        && request.auth.uid == userId;
+    }
+
+    function isOptionalString(data, field, maxLen) {
+      return !(field in data) || (data[field] is string && data[field].size() <= maxLen);
+    }
+
+    function isOptionalBool(data, field) {
+      return !(field in data) || (data[field] is bool);
+    }
+
+    function isOptionalList(data, field, maxItems) {
+      return !(field in data) || (data[field] is list && data[field].size() <= maxItems);
+    }
+
+    function isValidJobOrder(data, userId, jobId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'jobNumber', 'title', 'trade', 'status', 'urgency',
+          'clientName', 'startDate', 'finishDate', 'progressPercent', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'jobNumber', 'title', 'trade', 'status', 'urgency',
+          'materialsNeeded', 'materialsList', 'clientId', 'clientName', 'clientPhone',
+          'clientEmail', 'siteAddress', 'startDate', 'startTime', 'finishDate', 'finishTime',
+          'estimatedRevenue', 'estimatedCost', 'actualCost', 'progressPercent',
+          'scopeSummary', 'lineItems', 'coverPhotoUrl', 'driveFolderId', 'createdAt', 'updatedAt'
+        ])
+        && data.id is string && data.id == jobId && isValidId(data.id)
+        && data.ownerId is string && data.ownerId == userId
+        && data.jobNumber is string && data.jobNumber.size() >= 1 && data.jobNumber.size() <= 32
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 200
+        && data.trade in ['Kitchen & Bath', 'Carpentry & Deck', 'Electrical', 'Plumbing', 'General Handyman', 'Drywall & Paint']
+        && data.status in ['Open', 'Estimate', 'In Progress', 'Complete', 'On Hold']
+        && data.urgency is number && data.urgency >= 1 && data.urgency <= 5
+        && isOptionalBool(data, 'materialsNeeded')
+        && isOptionalList(data, 'materialsList', 100)
+        && (!('materialsList' in data) || data.materialsList.size() == 0 || data.materialsList[0] is map)
+        && isOptionalString(data, 'clientId', 128)
+        && data.clientName is string && data.clientName.size() >= 1 && data.clientName.size() <= 160
+        && isOptionalString(data, 'clientPhone', 40)
+        && isOptionalString(data, 'clientEmail', 160)
+        && isOptionalString(data, 'siteAddress', 300)
+        && data.startDate is string && data.startDate.size() <= 20
+        && isOptionalString(data, 'startTime', 20)
+        && data.finishDate is string && data.finishDate.size() <= 20
+        && isOptionalString(data, 'finishTime', 20)
+        && (!('estimatedRevenue' in data) || data.estimatedRevenue is number)
+        && (!('estimatedCost' in data) || data.estimatedCost is number)
+        && (!('actualCost' in data) || data.actualCost is number)
+        && data.progressPercent is number && data.progressPercent >= 0 && data.progressPercent <= 100
+        && isOptionalString(data, 'scopeSummary', 5000)
+        && isOptionalList(data, 'lineItems', 100)
+        && (!('lineItems' in data) || data.lineItems.size() == 0 || data.lineItems[0] is map)
+        && isOptionalString(data, 'coverPhotoUrl', 1000)
+        && isOptionalString(data, 'driveFolderId', 256)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidScheduleBlock(data, userId, scheduleId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'jobId', 'title', 'date', 'startTime', 'endTime',
+          'crewAssigned', 'syncState', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'jobId', 'title', 'date', 'startTime', 'endTime',
+          'crewAssigned', 'notes', 'googleEventId', 'syncState', 'createdAt', 'updatedAt'
+        ])
+        && data.id is string && data.id == scheduleId && isValidId(data.id)
+        && data.ownerId is string && data.ownerId == userId
+        && data.jobId is string && isValidId(data.jobId)
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 200
+        && data.date is string && data.date.size() <= 20
+        && data.startTime is string && data.startTime.size() <= 20
+        && data.endTime is string && data.endTime.size() <= 20
+        && data.crewAssigned is string && data.crewAssigned.size() <= 200
+        && isOptionalString(data, 'notes', 2000)
+        && isOptionalString(data, 'googleEventId', 256)
+        && data.syncState in ['synced', 'pending', 'local']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidDailyLog(data, userId, logId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'jobId', 'date', 'author', 'hoursWorked',
+          'progressPercent', 'workCompleted', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'jobId', 'date', 'author', 'weather', 'hoursWorked',
+          'progressPercent', 'workCompleted', 'materialsUsed', 'notes', 'photoIds',
+          'createdAt', 'updatedAt'
+        ])
+        && data.id is string && data.id == logId && isValidId(data.id)
+        && data.ownerId is string && data.ownerId == userId
+        && data.jobId is string && isValidId(data.jobId)
+        && data.date is string && data.date.size() <= 20
+        && data.author is string && data.author.size() <= 120
+        && isOptionalString(data, 'weather', 120)
+        && data.hoursWorked is number && data.hoursWorked >= 0
+        && data.progressPercent is number && data.progressPercent >= 0 && data.progressPercent <= 100
+        && data.workCompleted is string && data.workCompleted.size() <= 3000
+        && isOptionalString(data, 'materialsUsed', 2000)
+        && isOptionalString(data, 'notes', 3000)
+        && isOptionalList(data, 'photoIds', 50)
+        && (!('photoIds' in data) || data.photoIds.size() == 0 || data.photoIds[0] is string)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidPaymentRecord(data, userId, paymentId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'jobTitle', 'clientName', 'type', 'direction',
+          'amount', 'date', 'method', 'status', 'syncState', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'jobId', 'jobTitle', 'clientName', 'type', 'direction',
+          'amount', 'date', 'method', 'status', 'referenceNumber', 'notes',
+          'quickbooksId', 'syncState', 'createdAt', 'updatedAt'
+        ])
+        && data.id is string && data.id == paymentId && isValidId(data.id)
+        && data.ownerId is string && data.ownerId == userId
+        && isOptionalString(data, 'jobId', 128)
+        && data.jobTitle is string && data.jobTitle.size() <= 200
+        && data.clientName is string && data.clientName.size() <= 160
+        && data.type in ['Invoice Payment', 'Deposit', 'Progress Draw', 'Material Expense', 'Subcontractor Payout']
+        && data.direction in ['inflow', 'outflow']
+        && data.amount is number
+        && data.date is string && data.date.size() <= 20
+        && data.method in ['ACH', 'Check', 'Credit Card', 'Cash', 'QuickBooks Online']
+        && data.status in ['Paid', 'Pending', 'Overdue']
+        && isOptionalString(data, 'referenceNumber', 100)
+        && isOptionalString(data, 'notes', 2000)
+        && isOptionalString(data, 'quickbooksId', 128)
+        && data.syncState in ['synced', 'pending', 'local']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidJobFile(data, userId, fileId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'jobId', 'name', 'category', 'mimeType',
+          'sizeBytes', 'uploadedAt', 'syncState', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'jobId', 'name', 'category', 'mimeType', 'sizeBytes',
+          'uploadedAt', 'notes', 'localUrl', 'hasOfflineBlob', 'driveFileId',
+          'driveWebViewLink', 'googlePhotosUrl', 'syncState', 'createdAt', 'updatedAt'
+        ])
+        && data.id is string && data.id == fileId && isValidId(data.id)
+        && data.ownerId is string && data.ownerId == userId
+        && isOptionalString(data, 'jobId', 128)
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 255
+        && data.category in ['Site Photo', 'Estimate & Contract', 'Permit', 'Blueprint / Plan', 'Receipt']
+        && data.mimeType is string && data.mimeType.size() <= 120
+        && data.sizeBytes is number && data.sizeBytes >= 0
+        && data.uploadedAt is string && data.uploadedAt.size() <= 40
+        && isOptionalString(data, 'notes', 1000)
+        && isOptionalString(data, 'localUrl', 1000)
+        && isOptionalBool(data, 'hasOfflineBlob')
+        && isOptionalString(data, 'driveFileId', 256)
+        && isOptionalString(data, 'driveWebViewLink', 1000)
+        && isOptionalString(data, 'googlePhotosUrl', 1000)
+        && data.syncState in ['synced', 'pending', 'local']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidClientContact(data, userId, contactId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'name', 'syncState', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'name', 'phone', 'email', 'address',
+          'company', 'googleResourceName', 'syncState', 'createdAt', 'updatedAt'
+        ])
+        && data.id is string && data.id == contactId && isValidId(data.id)
+        && data.ownerId is string && data.ownerId == userId
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 160
+        && isOptionalString(data, 'phone', 40)
+        && isOptionalString(data, 'email', 160)
+        && isOptionalString(data, 'address', 300)
+        && isOptionalString(data, 'company', 160)
+        && isOptionalString(data, 'googleResourceName', 256)
+        && data.syncState in ['synced', 'pending', 'local']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidUserCounterMeta(data, userId) {
+      return data.keys().hasAll(['ownerId', 'nextJobSeq', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['ownerId', 'nextJobSeq', 'seeded', 'contactsResetV1', 'createdAt', 'updatedAt'])
+        && data.ownerId is string && data.ownerId == userId
+        && data.nextJobSeq is number && data.nextJobSeq >= 1
+        && isOptionalBool(data, 'seeded')
+        && isOptionalBool(data, 'contactsResetV1')
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    match /users/{userId} {
+      match /jobs/{jobId} {
+        allow get: if isVerifiedOwner(userId) && isValidId(jobId);
+        allow list: if isVerifiedOwner(userId) && existing().ownerId == request.auth.uid;
+        allow create: if isVerifiedOwner(userId)
+          && isValidId(jobId)
+          && isValidJobOrder(incoming(), userId, jobId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+        allow update: if isVerifiedOwner(userId)
+          && isValidId(jobId)
+          && isValidJobOrder(incoming(), userId, jobId)
+          && incoming().ownerId == existing().ownerId
+          && incoming().id == existing().id
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'jobNumber', 'title', 'trade', 'status', 'urgency',
+            'materialsNeeded', 'materialsList', 'clientId', 'clientName', 'clientPhone',
+            'clientEmail', 'siteAddress', 'startDate', 'startTime', 'finishDate', 'finishTime',
+            'estimatedRevenue', 'estimatedCost', 'actualCost', 'progressPercent',
+            'scopeSummary', 'lineItems', 'coverPhotoUrl', 'driveFolderId', 'updatedAt'
+          ]);
+        allow delete: if isVerifiedOwner(userId) && isValidId(jobId);
+      }
+
+      match /schedules/{scheduleId} {
+        allow get: if isVerifiedOwner(userId) && isValidId(scheduleId);
+        allow list: if isVerifiedOwner(userId) && existing().ownerId == request.auth.uid;
+        allow create: if isVerifiedOwner(userId)
+          && isValidId(scheduleId)
+          && isValidScheduleBlock(incoming(), userId, scheduleId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+        allow update: if isVerifiedOwner(userId)
+          && isValidId(scheduleId)
+          && isValidScheduleBlock(incoming(), userId, scheduleId)
+          && incoming().ownerId == existing().ownerId
+          && incoming().id == existing().id
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'jobId', 'title', 'date', 'startTime', 'endTime',
+            'crewAssigned', 'notes', 'googleEventId', 'syncState', 'updatedAt'
+          ]);
+        allow delete: if isVerifiedOwner(userId) && isValidId(scheduleId);
+      }
+
+      match /dailyLogs/{logId} {
+        allow get: if isVerifiedOwner(userId) && isValidId(logId);
+        allow list: if isVerifiedOwner(userId) && existing().ownerId == request.auth.uid;
+        allow create: if isVerifiedOwner(userId)
+          && isValidId(logId)
+          && isValidDailyLog(incoming(), userId, logId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+        allow update: if isVerifiedOwner(userId)
+          && isValidId(logId)
+          && isValidDailyLog(incoming(), userId, logId)
+          && incoming().ownerId == existing().ownerId
+          && incoming().id == existing().id
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'jobId', 'date', 'author', 'weather', 'hoursWorked',
+            'progressPercent', 'workCompleted', 'materialsUsed', 'notes', 'photoIds', 'updatedAt'
+          ]);
+        allow delete: if isVerifiedOwner(userId) && isValidId(logId);
+      }
+
+      match /payments/{paymentId} {
+        allow get: if isVerifiedOwner(userId) && isValidId(paymentId);
+        allow list: if isVerifiedOwner(userId) && existing().ownerId == request.auth.uid;
+        allow create: if isVerifiedOwner(userId)
+          && isValidId(paymentId)
+          && isValidPaymentRecord(incoming(), userId, paymentId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+        allow update: if isVerifiedOwner(userId)
+          && isValidId(paymentId)
+          && isValidPaymentRecord(incoming(), userId, paymentId)
+          && incoming().ownerId == existing().ownerId
+          && incoming().id == existing().id
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'jobId', 'jobTitle', 'clientName', 'type', 'direction', 'amount',
+            'date', 'method', 'status', 'referenceNumber', 'notes', 'quickbooksId',
+            'syncState', 'updatedAt'
+          ]);
+        allow delete: if isVerifiedOwner(userId) && isValidId(paymentId);
+      }
+
+      match /files/{fileId} {
+        allow get: if isVerifiedOwner(userId) && isValidId(fileId);
+        allow list: if isVerifiedOwner(userId) && existing().ownerId == request.auth.uid;
+        allow create: if isVerifiedOwner(userId)
+          && isValidId(fileId)
+          && isValidJobFile(incoming(), userId, fileId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+        allow update: if isVerifiedOwner(userId)
+          && isValidId(fileId)
+          && isValidJobFile(incoming(), userId, fileId)
+          && incoming().ownerId == existing().ownerId
+          && incoming().id == existing().id
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'jobId', 'name', 'category', 'mimeType', 'sizeBytes', 'uploadedAt',
+            'notes', 'localUrl', 'hasOfflineBlob', 'driveFileId', 'driveWebViewLink',
+            'googlePhotosUrl', 'syncState', 'updatedAt'
+          ]);
+        allow delete: if isVerifiedOwner(userId) && isValidId(fileId);
+      }
+
+      match /contacts/{contactId} {
+        allow get: if isVerifiedOwner(userId) && isValidId(contactId);
+        allow list: if isVerifiedOwner(userId) && existing().ownerId == request.auth.uid;
+        allow create: if isVerifiedOwner(userId)
+          && isValidId(contactId)
+          && isValidClientContact(incoming(), userId, contactId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+        allow update: if isVerifiedOwner(userId)
+          && isValidId(contactId)
+          && isValidClientContact(incoming(), userId, contactId)
+          && incoming().ownerId == existing().ownerId
+          && incoming().id == existing().id
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'name', 'phone', 'email', 'address', 'company',
+            'googleResourceName', 'syncState', 'updatedAt'
+          ]);
+        allow delete: if isVerifiedOwner(userId) && isValidId(contactId);
+      }
+
+      match /meta/{docId} {
+        allow get: if isVerifiedOwner(userId) && isValidId(docId);
+        allow list: if isVerifiedOwner(userId) && existing().ownerId == request.auth.uid;
+        allow create: if isVerifiedOwner(userId)
+          && isValidId(docId)
+          && isValidUserCounterMeta(incoming(), userId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+        allow update: if isVerifiedOwner(userId)
+          && isValidId(docId)
+          && isValidUserCounterMeta(incoming(), userId)
+          && incoming().ownerId == existing().ownerId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'nextJobSeq', 'seeded', 'contactsResetV1', 'updatedAt'
+          ]);
+        allow delete: if isVerifiedOwner(userId) && isValidId(docId);
+      }
+    }
+  }
+}
